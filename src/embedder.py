@@ -43,8 +43,8 @@ class PositionalEncoding(nn.Module):
         pos = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div = torch.exp(torch.arange(0, d_model, 2).float() * 
                         (-math.log(wavelength) / d_model))
-        pe[:, 0::2] = torch.sin(pos * div)
-        pe[:, 1::2] = torch.cos(pos * div)
+        pe[:, 0::2] = torch.sin(pos * div) # Even indices
+        pe[:, 1::2] = torch.cos(pos * div) # Odd indices
         self.register_buffer('pe', pe.unsqueeze(0))
 
     def forward(self, x: Tensor) -> Tensor:
