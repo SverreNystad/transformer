@@ -30,3 +30,16 @@ def test_multi_head_attention():
     assert self_attention.shape == (1, sequence_length, d_model), (
         f"Expected shape (1, {sequence_length}, {d_model}), but got {self_attention.shape}"
     )
+
+def test_positionwise_feed_forward():
+    d_model = 4
+    d_ff = 8
+    sequence_length = 6
+    feed_forward_block = PositionwiseFeedForward(d_model=d_model, d_ff=d_ff)
+    
+    x = torch.randn(1, sequence_length, d_model)
+
+    output = feed_forward_block(x)
+    assert output.shape == (1, sequence_length, d_model), (
+        f"Expected shape (1, {sequence_length}, {d_model}), but got {output.shape}"
+    )
