@@ -57,7 +57,7 @@ class PositionalEncoding(nn.Module):
 
         
 
-class ExternalEmbedder:
+class ExternalEmbedder(nn.Module):
     """
     A class to take in a sequence of words and transform them into a vector representation.
     This Vector representation will embed the token and combine the positional information of the token in the sentence.
