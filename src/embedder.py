@@ -4,23 +4,23 @@ import torch
 import torch
 from torch import nn
 from torch import Tensor
-from typing import Optional, Tuple
 
-import nltk
-from nltk.tokenize import word_tokenize
-
-nltk.download('punkt')
+import spacy
 
 class Embedder(nn.Module):
-    def __init__(self, vocab_size: int, d_in: int, max_seq_len: int, dropout: float = 0.1) -> None:
+    def __init__(self, embedding_dimension: int, max_seq_len: int) -> None:
         super().__init__()
-        self.token_embedding = nn.Embedding(vocab_size, d_in)
+        # Load the Norwegian language model
+        self.max_seq_len = max_seq_len
+        self.nlp = spacy.load("nb_core_news_sm")
+        vocab_size = len(self.nlp.vocab)
+        print(f"Vocab size: {vocab_size}")
+        self.token_embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dimension)
         
-        self.positional_embedding   = nn.Embedding(max_seq_len, d_in)
-        self.dropout   = nn.Dropout(dropout)
+        self.positional_embedding = PositionalEncoding(d_model=embedding_dimension, max_len=max_seq_len)
 
         # Layer norm to stabilize embedding magnitudes
-        self.layer_norm = nn.LayerNorm(d_in)
+        self.layer_norm = nn.LayerNorm(embedding_dimension)
 
 
     def forward(self, sentence: str) -> Tensor:
@@ -30,6 +30,22 @@ class Embedder(nn.Module):
         Returns:
             Tensor of shape (batch_size, seq_len, d_model)
         """
+        # Tokenize the sentence
+        doc = self.nlp(sentence)
+        token_ids = [token.idx for token in doc]
+        if len(token_ids) < self.max_seq_len:
+            # Pad the sequence with zeros
+            token_ids += [0] * (self.max_seq_len - len(token_ids))
+        
+        # Convert to tensor (batch_size, seq_len)
+        token_ids_tensor = torch.tensor(token_ids).unsqueeze(0)
+        
+        token_embeddings = self.token_embedding(token_ids_tensor)
+        positional_embeddings = self.positional_embedding(token_embeddings)
+        embeddings = self.layer_norm(positional_embeddings)
+        return embeddings
+
+
 
 class PositionalEncoding(nn.Module):
     """
