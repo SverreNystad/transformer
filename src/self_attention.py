@@ -17,7 +17,7 @@ class TransformerBlock(nn.Module):
 
     
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, dropout: float = 0.1) -> None:
+    def __init__(self, d_model: int, n_heads: int) -> None:
         super().__init__()
         self.n_heads = n_heads
         self.d_k = d_model // n_heads
@@ -25,20 +25,28 @@ class MultiHeadAttention(nn.Module):
         self.linear_q = nn.Linear(d_model, n_heads * self.d_k)
         self.linear_k = nn.Linear(d_model, n_heads * self.d_k)
         self.linear_v = nn.Linear(d_model, n_heads * self.d_v)
-        self.linear_out = nn.Linear(n_heads * self.d_v, d_model)
-        self.attention = ScaledDotProductAttention(dropout)
+        self.merger = nn.Linear(n_heads * self.d_v, d_model)
+        self.attention = ScaledDotProductAttention()
     
     def forward(
         self, 
-        embedding: Tensor, 
-        mask: Optional[Tensor] = None,
+        queries: Tensor,  # (batch_size, n_heads, len_q, d_k)
+        keys: Tensor,  # (batch_size, n_heads, len_k, d_k)
+        values: Tensor,  # (batch_size, n_heads, len_k, d_v)
         ) -> Tensor:
-        pass
+
+        Q = self.linear_q(queries)
+        K = self.linear_k(keys)
+        V = self.linear_v(values)
+
+        attention_scores = self.attention(Q, K, V)
+        merged_attention = self.merger(attention_scores)
+        return merged_attention
+        
 
 class ScaledDotProductAttention(nn.Module):
-    def __init__(self, dropout: float = 0.1) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.dropout = nn.Dropout(dropout)
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(
@@ -62,7 +70,6 @@ class ScaledDotProductAttention(nn.Module):
             attention_scores = attention_scores.masked_fill(mask == 0, float('-inf'))
         attention_weights = self.softmax(attention_scores)
         attn_output = torch.matmul(attention_weights, values)
-        attn_output = self.dropout(attn_output)
         return attn_output
 
 
