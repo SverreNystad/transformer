@@ -22,10 +22,10 @@ class MultiHeadAttention(nn.Module):
         self.n_heads = n_heads
         self.d_k = d_model // n_heads
         self.d_v = d_model // n_heads
-        self.linear_q = nn.Linear(d_model, n_heads * self.d_k)
-        self.linear_k = nn.Linear(d_model, n_heads * self.d_k)
-        self.linear_v = nn.Linear(d_model, n_heads * self.d_v)
-        self.merger = nn.Linear(n_heads * self.d_v, d_model)
+        self.linear_q = nn.Linear(d_model, n_heads * self.d_k) # W_q
+        self.linear_k = nn.Linear(d_model, n_heads * self.d_k) # W_k
+        self.linear_v = nn.Linear(d_model, n_heads * self.d_v) # W_v
+        self.merger = nn.Linear(n_heads * self.d_v, d_model) # W_o
         self.attention = ScaledDotProductAttention()
     
     def forward(
