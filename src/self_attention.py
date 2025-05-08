@@ -74,15 +74,22 @@ class ScaledDotProductAttention(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1) -> None:
+    """
+    The Feed Forward Network (FFN) in the Transformer architecture.
+    It consists of an expand-and-contract structure
+
+    Mathematically, it can be represented as: FFN(x) = max(0, xW1 + b1)W2 + b2
+    """
+    def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
         super().__init__()
-        pass
+        self.linear1 = nn.Linear(d_model, d_ff)
+        self.relu    = nn.ReLU()
+        self.linear2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: Tensor) -> Tensor:
-        """
-        Args:
-            x: Tensor of shape (batch_size, seq_len, d_model)
-        Returns:
-            Tensor of same shape
-        """
-        pass
+        logits = self.linear1(x)
+        logits = self.relu(logits)
+        logits = self.linear2(logits)
+        logits = self.dropout(logits)
+        return logits
