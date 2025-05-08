@@ -1,19 +1,42 @@
+import torch
 from torch import nn
 from torch import Tensor
 from typing import Optional, Tuple
 
-import torch
 
 
 class TransformerBlock(nn.Module):
     def __init__(self, d_model: int, n_heads: int, d_ff: int, dropout: float = 0.1) -> None:
         super().__init__()
-        self.attention = MultiHeadAttention(d_model, n_heads, dropout)
+        self.attention = MultiHeadAttention(d_model, n_heads)
         self.ffn = PositionwiseFeedForward(d_model, d_ff, dropout)
         self.layer_norm1 = nn.LayerNorm(d_model)
         self.layer_norm2 = nn.LayerNorm(d_model)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
+    
+    def forward(self, 
+                queries: Tensor, 
+                keys: Tensor,
+                values: Tensor,
+                mask: Optional[Tensor] = None) -> Tensor:
+        """
+        Args:
+            x: Tensor of shape (batch_size, seq_len, d_model)
+            mask: Optional mask of shape (batch_size, 1, seq_len, seq_len)
+        Returns:
+            Tensor of same shape
+        """
+        x = queries + keys + values
+        attention = self.attention(queries, keys, values, mask)
+        attention = self.dropout1(attention)
+        # Add & Norm
+        x = self.layer_norm1(x + attention)
+        ffn_output = self.ffn(x)
+        ffn_output = self.dropout2(ffn_output)
+        # Residual connection
+        output = self.layer_norm2(x + ffn_output)
+        return output
 
     
 class MultiHeadAttention(nn.Module):
@@ -33,6 +56,7 @@ class MultiHeadAttention(nn.Module):
         queries: Tensor,  # (batch_size, n_heads, len_q, d_k)
         keys: Tensor,  # (batch_size, n_heads, len_k, d_k)
         values: Tensor,  # (batch_size, n_heads, len_k, d_v)
+        mask: Optional[Tensor] = None  # (batch_size, 1, len_q, len_k)
         ) -> Tensor:
 
         Q = self.linear_q(queries)
@@ -79,6 +103,7 @@ class PositionwiseFeedForward(nn.Module):
     It consists of an expand-and-contract structure
 
     Mathematically, it can be represented as: FFN(x) = max(0, xW1 + b1)W2 + b2
+    Or as the paper states: "Another way of describing this is as two convolutions with kernel size 1" (Vaswani et al., 2017).
     """
     def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
         super().__init__()
