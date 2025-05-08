@@ -1,6 +1,6 @@
 
 import torch
-from src.self_attention import ScaledDotProductAttention, MultiHeadAttention
+from src.self_attention import ScaledDotProductAttention, MultiHeadAttention, PositionwiseFeedForward, TransformerBlock
 
 
 def test_scaled_dot_product_attention():
@@ -40,6 +40,22 @@ def test_positionwise_feed_forward():
     x = torch.randn(1, sequence_length, d_model)
 
     output = feed_forward_block(x)
+    assert output.shape == (1, sequence_length, d_model), (
+        f"Expected shape (1, {sequence_length}, {d_model}), but got {output.shape}"
+    )
+
+def test_transformer_block():
+    d_model = 4
+    n_heads = 2
+    d_ff = 8
+    sequence_length = 6
+    transformer_block = TransformerBlock(d_model=d_model, n_heads=n_heads, d_ff=d_ff)
+    
+    queries = torch.randn(1, sequence_length, d_model)
+    keys = torch.randn(1, sequence_length, d_model)
+    values = torch.randn(1, sequence_length, d_model)
+
+    output = transformer_block(queries, keys, values)
     assert output.shape == (1, sequence_length, d_model), (
         f"Expected shape (1, {sequence_length}, {d_model}), but got {output.shape}"
     )
