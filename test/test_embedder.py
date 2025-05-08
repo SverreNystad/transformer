@@ -5,10 +5,14 @@ from src.embedder import Embedder, PositionalEncoding
 
 def test_custom_embedder():
 
-    model = Embedder(vocab_size=10000, d_in=512, max_seq_len=50)
+    d_model = 512
+    max_len = 50
+    model = Embedder(embedding_dimension=d_model, max_seq_len=max_len)
     sentence = "The weather is lovely today."
     embeddings = model(sentence)
-    assert True
+    assert embeddings.shape == (1, max_len, d_model), (
+        f"Expected shape (1, {max_len}, {d_model}), but got {embeddings.shape}"
+    )    
 
 def test_positional_encoding():
     d_model = 512
