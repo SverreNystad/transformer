@@ -63,7 +63,7 @@ class MultiHeadAttention(nn.Module):
         K = self.linear_k(keys)
         V = self.linear_v(values)
 
-        attention_scores = self.attention(Q, K, V)
+        attention_scores = self.attention(Q, K, V, mask)
         merged_attention = self.merger(attention_scores)
         return merged_attention
         
