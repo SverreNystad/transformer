@@ -70,6 +70,15 @@ class PositionalEncoding(nn.Module):
         return x + self.pe[:, : x.size(1)]
 
 
+def make_causal_mask(size: int) -> Tensor:
+    """
+    Create a causal mask for the decoder to prevent attending to future tokens.
+    """
+    # triu with diagonal=1 gives 1s above diagonal; invert to get causal
+    mask = ~torch.triu(torch.ones(size, size), diagonal=1).bool()
+    return mask
+
+
 class ExternalEmbedder(nn.Module):
     """
     A class to take in a sequence of words and transform them into a vector representation.
