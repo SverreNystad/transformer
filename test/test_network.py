@@ -55,8 +55,8 @@ def test_transformer():
     src_tensor = src_embedding(src_sequence)
     target_tensor = target_embedding(target_sequence)
     casual_mask = make_causal_mask(sequence_length).to(target_tensor.device)
+    vocab_size = src_embedding.vocab_size
 
-    vocab_size = target_embedding.token_embedding.num_embeddings
     transformer = Transformer(
         output_classes=vocab_size,
         num_encoder_layers=num_layers,

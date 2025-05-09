@@ -7,14 +7,13 @@ from torch import Tensor, nn
 
 
 class Embedder(nn.Module):
-    def __init__(self, embedding_dimension: int, max_seq_len: int) -> None:
+    def __init__(self, embedding_dimension: int, max_seq_len: int, token_language_package: str = "nb_core_news_sm") -> None:
         super().__init__()
         # Load the Norwegian language model
         self.max_seq_len = max_seq_len
-        self.nlp = spacy.load("nb_core_news_sm")
-        vocab_size = len(self.nlp.vocab)
-        print(f"Vocab size: {vocab_size}")
-        self.token_embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dimension)
+        self.nlp = spacy.load(token_language_package)
+        self.vocab_size = len(self.nlp.vocab)
+        self.token_embedding = nn.Embedding(num_embeddings=self.vocab_size, embedding_dim=embedding_dimension)
 
         self.positional_embedding = PositionalEncoding(d_model=embedding_dimension, max_len=max_seq_len)
 
