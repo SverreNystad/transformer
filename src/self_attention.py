@@ -3,8 +3,9 @@ from torch import Tensor, nn
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, d_ff: int, dropout: float = 0.1) -> None:
+    def __init__(self, d_model: int, n_heads: int, d_ff: int, dropout: float = 0.1, include_ffn: bool = True) -> None:
         super().__init__()
+        self.include_ffn = include_ffn
         self.attention = MultiHeadAttention(d_model, n_heads)
         self.ffn = PositionwiseFeedForward(d_model, d_ff, dropout)
         self.layer_norm1 = nn.LayerNorm(d_model)
@@ -12,19 +13,24 @@ class TransformerBlock(nn.Module):
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
 
-    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, mask: Tensor | None = None) -> Tensor:
+    def forward(self, queries: Tensor, keys: Tensor, values: Tensor, masks: Tensor | None = None) -> Tensor:
         """
         Args:
-            x: Tensor of shape (batch_size, seq_len, d_model)
-            mask: Optional mask of shape (batch_size, 1, seq_len, seq_len)
+            queries (Tensor): of shape (batch_size, seq_len, d_model)
+            keys: (Tensor): of shape (batch_size, seq_len, d_model)
+            values (Tensor): of shape (batch_size, seq_len, d_model)
+            masks (Optional(Tensor)): masks of shape (batch_size, 1, seq_len, seq_len)
         Returns:
             Tensor of same shape
         """
-        attention = self.attention(queries, keys, values, mask)
+        attention = self.attention(queries, keys, values, masks)
         attention = self.dropout1(attention)
         # Add & Norm
         x = queries + keys + values
         x = self.layer_norm1(x + attention)
+        if not self.include_ffn:
+            return x
+        # Feed Forward Network
         ffn_output = self.ffn(x)
         ffn_output = self.dropout2(ffn_output)
         # Residual connection
@@ -49,13 +55,13 @@ class MultiHeadAttention(nn.Module):
         queries: Tensor,  # (batch_size, n_heads, len_q, d_k)
         keys: Tensor,  # (batch_size, n_heads, len_k, d_k)
         values: Tensor,  # (batch_size, n_heads, len_k, d_v)
-        mask: Tensor | None = None,  # (batch_size, 1, len_q, len_k)
+        masks: Tensor | None = None,  # (batch_size, 1, len_q, len_k)
     ) -> Tensor:
         Q = self.linear_q(queries)
         K = self.linear_k(keys)
         V = self.linear_v(values)
 
-        attention_scores = self.attention(Q, K, V, mask)
+        attention_scores = self.attention(Q, K, V, masks)
         merged_attention = self.merger(attention_scores)
         return merged_attention
 
