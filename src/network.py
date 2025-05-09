@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor, nn
 
+from src.embedder import Embedder
 from src.self_attention import TransformerBlock
 
 
@@ -74,26 +75,50 @@ class Decoder(nn.Module):
 class Transformer(nn.Module):
     def __init__(
         self,
-        vocab_size: int,
         num_encoder_layers: int,
         num_decoder_layers: int,
         d_model: int,
         n_heads: int,
         d_ff: int,
         dropout: float = 0.1,
+        max_seq_len: int = 512,
     ) -> None:
         super().__init__()
+        self.embedder = Embedder(embedding_dimension=d_model, max_seq_len=max_seq_len)
+        self.encoder = Encoder(num_layers=num_encoder_layers, d_model=d_model, n_heads=n_heads, d_ff=d_ff, dropout=dropout)
+        self.decoder = Decoder(num_layers=num_decoder_layers, d_model=d_model, n_heads=n_heads, d_ff=d_ff, dropout=dropout)
+        self.max_seq_len = max_seq_len
+        self.vocab_size = self.embedder.token_embedding.num_embeddings
+
+        # Final linear layer to project the decoder output to the vocabulary size
+        self.linear = nn.Linear(d_model, self.vocab_size)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(
         self,
-        src_tokens: torch.LongTensor,  # (batch_size, src_len)
-        target_tokens: torch.LongTensor,  # (batch_size, tgt_len)
-        src_mask: Tensor | None = None,
-        target_mask: Tensor | None = None,
-        memory_mask: Tensor | None = None,
+        src_sequence: str,
+        target_sequence: str,
     ) -> Tensor:
         """
         Returns:
             logits: Tensor of shape (batch_size, tgt_len, vocab_size)
         """
-        pass
+        # Encode the source sequence
+        src_embedding: Tensor = self.embedder(src_sequence)
+        memory: Tensor = self.encoder(src_embedding)
+
+        # Decode the target sequence
+        causal_mask = self._make_causal_mask(self.max_seq_len).to(src_embedding.device)  # True on diagonal & below, False above
+        target_embedding: Tensor = self.embedder(target_sequence)
+        output: Tensor = self.decoder(target_embedding, memory, causal_mask)
+
+        # Project to vocabulary size
+        logits = self.linear(output)
+        return logits
+
+    def _make_causal_mask(self, size: int) -> Tensor:
+        """
+        Create a causal mask for the decoder to prevent attending to future tokens.
+        """
+        mask = torch.triu(torch.ones(size, size), diagonal=1).bool()
+        return mask
