@@ -120,5 +120,6 @@ class Transformer(nn.Module):
         """
         Create a causal mask for the decoder to prevent attending to future tokens.
         """
-        mask = torch.triu(torch.ones(size, size), diagonal=1).bool()
+        # triu with diagonal=1 gives 1s above diagonal; invert to get causal
+        mask = ~torch.triu(torch.ones(size, size), diagonal=1).bool()
         return mask
