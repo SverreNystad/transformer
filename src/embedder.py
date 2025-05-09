@@ -34,7 +34,7 @@ class Embedder(nn.Module):
             token_ids += [0] * (self.max_seq_len - len(token_ids))
 
         # Convert to tensor (batch_size, seq_len)
-        token_ids_tensor = torch.tensor(token_ids).unsqueeze(0)
+        token_ids_tensor = torch.tensor(token_ids).unsqueeze(0).to(self.token_embedding.weight.device)
 
         token_embeddings = self.token_embedding(token_ids_tensor)
         positional_embeddings = self.positional_embedding(token_embeddings)
