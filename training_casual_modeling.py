@@ -1,10 +1,16 @@
+import os
+
 import torch
+from dotenv import load_dotenv
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 
+import wandb
 from src.data import get_dataloader
 from src.embedder import Embedder, make_causal_mask
 from src.network import Transformer
+
+load_dotenv()
 
 
 def train(
@@ -20,6 +26,20 @@ def train(
     d_ff = 8
     num_layers = 2
     max_seq_len = 6
+    wandb.init(
+        project="causal-transformer",
+        # mode="disabled",
+        config={
+            "epochs": epochs,
+            "batch_size": batch_size,
+            "learning_rate": lr,
+            "d_model": d_model,
+            "n_heads": n_heads,
+            "d_ff": d_ff,
+            "num_layers": num_layers,
+            "max_seq_len": max_seq_len,
+        },
+    )
 
     # Instantiate embedder & model
     embedder = Embedder(embedding_dimension=d_model, max_seq_len=max_seq_len).to(device)
@@ -33,6 +53,8 @@ def train(
         n_heads=n_heads,
         d_ff=d_ff,
     ).to(device)
+
+    wandb.watch(model, log="all")
 
     # Loss ignores padding token id = 0
     criterion = CrossEntropyLoss(ignore_index=0)
@@ -82,9 +104,23 @@ def train(
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch:02d} — Loss: {avg_loss:.4f}")
+        wandb.log({"epoch": epoch, "train_loss": avg_loss})
+
+        if epoch % 100 == 0:
+            checkpoint_path = f"models/model_epoch_{epoch}.pth"
+            torch.save(model.state_dict(), checkpoint_path)
+            artifact = wandb.Artifact("transformer-model", type="model")
+            artifact.add_file(checkpoint_path)
+            wandb.log_artifact(artifact)
+            print(f"Model checkpoint saved at {checkpoint_path}")
 
 
 if __name__ == "__main__":
+    # Wandb logging
+    WANDB_API_KEY = os.getenv("WANDB_API_KEY")
+    if WANDB_API_KEY:
+        wandb.login(key=WANDB_API_KEY)
+
     sentences = [
         "Dette er en testsetning",
         "Maskinlæring er gøy",
