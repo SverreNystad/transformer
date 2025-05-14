@@ -42,6 +42,7 @@ def train(
     dataset: Dataset,
     device: str = "cpu",
     shall_save: bool = False,
+    validation_interval: int = 100,
 ):
     # Hyperparameters
     epochs = hyper_params.epochs
@@ -55,7 +56,7 @@ def train(
 
     wandb.init(
         project="causal-transformer",
-        mode="disabled",
+        # mode="disabled",
         config={
             "epochs": epochs,
             "batch_size": batch_size,
@@ -67,6 +68,8 @@ def train(
             "max_seq_len": max_seq_len,
         },
     )
+    table = wandb.Table(columns=["epoch", "generated_eval_text"])
+
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     sentences = []
     for batch in dataloader:
@@ -137,22 +140,28 @@ def train(
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch:02d} — Loss: {avg_loss:.4f}")
-        wandb.log({"epoch": epoch, "train_loss": avg_loss})
 
-        # Inference
-        inspect_predictions(
-            model=model,
-            embedder=embedder,
-            device=device,
-        )
+        wandb.log({"train_loss": avg_loss, "epoch": epoch})
 
-        if epoch % 100 == 0 and shall_save:
-            checkpoint_path = f"models/model_epoch_{epoch}.pth"
-            torch.save(model.state_dict(), checkpoint_path)
-            artifact = wandb.Artifact("transformer-model", type="model")
-            artifact.add_file(checkpoint_path)
-            wandb.log_artifact(artifact)
-            print(f"Model checkpoint saved at {checkpoint_path}")
+        if epoch % validation_interval == 0:
+            # Inference
+            sample = inspect_predictions(
+                model=model,
+                embedder=embedder,
+                device=device,
+            )
+
+            # Log to wandb
+            table.add_data(epoch, sample)
+            wandb.log({"validation": table})
+
+            if shall_save:
+                checkpoint_path = f"models/model_epoch_{epoch}.pth"
+                torch.save(model.state_dict(), checkpoint_path)
+                artifact = wandb.Artifact("transformer-model", type="model")
+                artifact.add_file(checkpoint_path)
+                wandb.log_artifact(artifact)
+                print(f"Model checkpoint saved at {checkpoint_path}")
 
 
 if __name__ == "__main__":
@@ -162,14 +171,14 @@ if __name__ == "__main__":
         wandb.login(key=WANDB_API_KEY)
 
     hyper_params = Hyperparameters(
-        epochs=2000,
-        batch_size=1,
+        epochs=20_000,
+        batch_size=2,
         lr=0.001,
         d_model=512,
         n_heads=8,
         num_layers=6,
         d_ff=2048,
-        max_seq_len=200,
+        max_seq_len=100,
     )
 
     jokes_dataset = JokesDataset()
@@ -178,5 +187,6 @@ if __name__ == "__main__":
         hyper_params=hyper_params,
         dataset=jokes_dataset,
         device="cuda" if torch.cuda.is_available() else "cpu",
-        shall_save=False,
+        shall_save=True,
+        validation_interval=100,
     )
