@@ -1,9 +1,12 @@
 import math
 
+import nltk
 import torch
 from nltk.tokenize import word_tokenize
 from sentence_transformers import SentenceTransformer
 from torch import Tensor, nn
+
+nltk.download("punkt_tab")
 
 START_TOKEN = "<START>"
 PADDING_TOKEN = "<PADDING>"
