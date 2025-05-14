@@ -55,10 +55,17 @@ class Embedder(nn.Module):
         # Convert to tensor (batch_size, seq_len)
         token_ids_tensor = torch.tensor(token_ids).unsqueeze(0).to(self.token_embedding.weight.device)
 
-        token_embeddings = self.token_embedding(token_ids_tensor)
-        positional_embeddings = self.positional_embedding(token_embeddings)
-        embeddings = self.layer_norm(positional_embeddings)
-        return embeddings
+        return self.embed_ids(token_ids_tensor)
+
+    def embed_ids(self, token_ids: torch.LongTensor) -> torch.Tensor:
+        """
+        Given token_ids of shape (batch_size, seq_len),
+        return the full embeddings (batch_size, seq_len, d_model)
+        with positional embedding + layer norm applied.
+        """
+        x = self.token_embedding(token_ids)
+        x = self.positional_embedding(x)
+        return self.layer_norm(x)
 
     def get_token_ids(self, sentence: str, language="english") -> list[int]:
         """
