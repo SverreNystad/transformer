@@ -1,6 +1,6 @@
 import torch
 
-from src.embedder import Embedder, make_causal_mask
+from src.embedder import Embedder, create_vocab_mapping, make_causal_mask
 from src.network import Decoder, Encoder, Transformer
 
 
@@ -46,12 +46,14 @@ def test_transformer():
     n_heads = 2
     d_ff = 8
     num_layers = 2
-    sequence_length = 6
+    sequence_length = 10
 
-    src_sequence = "This is a test."
-    target_sequence = "This is a test."
-    src_embedding = Embedder(embedding_dimension=d_model, max_seq_len=sequence_length)
-    target_embedding = Embedder(embedding_dimension=d_model, max_seq_len=sequence_length)
+    sentence = "This is a test."
+    vocab = create_vocab_mapping([sentence])
+    src_sequence = sentence
+    target_sequence = sentence
+    src_embedding = Embedder(vocab_table=vocab, embedding_dimension=d_model, max_seq_len=sequence_length)
+    target_embedding = Embedder(vocab_table=vocab, embedding_dimension=d_model, max_seq_len=sequence_length)
     src_tensor = src_embedding(src_sequence)
     target_tensor = target_embedding(target_sequence)
     casual_mask = make_causal_mask(sequence_length).to(target_tensor.device)
