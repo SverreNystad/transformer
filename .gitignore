@@ -6,6 +6,8 @@ __pycache__/
 .vscode/
 wandb/
 
+data/
+
 # C extensions
 *.so
 
