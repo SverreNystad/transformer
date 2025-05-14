@@ -1,17 +1,38 @@
 import math
 
-import spacy
 import torch
+from nltk.tokenize import word_tokenize
 from sentence_transformers import SentenceTransformer
 from torch import Tensor, nn
 
+START_TOKEN = "<START>"
+PADDING_TOKEN = "<PADDING>"
+END_TOKEN = "<END>"
+UNKNOWN_TOKEN = "<UNKNOWN>"
+
+
+def create_vocab_mapping(raw_sentences: list[str], language="english") -> dict[str, int]:
+    """
+    Create a vocabulary mapping from raw sentences.
+    The mapping will include special tokens for start, padding, end, and unknown tokens.
+    """
+    vocab = {START_TOKEN: 0, PADDING_TOKEN: 1, END_TOKEN: 2, UNKNOWN_TOKEN: 3}
+    i = len(vocab)
+    for sentence in raw_sentences:
+        tokens = word_tokenize(sentence, language=language)
+        for token in tokens:
+            if token not in vocab:
+                vocab[token] = i
+                i += 1
+    return vocab
+
 
 class Embedder(nn.Module):
-    def __init__(self, embedding_dimension: int, max_seq_len: int, token_language_package: str = "nb_core_news_sm") -> None:
+    def __init__(self, vocab_table: dict[str, int], embedding_dimension: int, max_seq_len: int) -> None:
         super().__init__()
         self.max_seq_len = max_seq_len
-        self.nlp = spacy.load(token_language_package)
-        self.vocab_size = len(self.nlp.vocab)
+        self.vocab_table = vocab_table
+        self.vocab_size = len(vocab_table)
         self.token_embedding = nn.Embedding(num_embeddings=self.vocab_size, embedding_dim=embedding_dimension)
 
         self.positional_embedding = PositionalEncoding(d_model=embedding_dimension, max_len=max_seq_len)
@@ -26,13 +47,8 @@ class Embedder(nn.Module):
         Returns:
             Tensor of shape (batch_size, seq_len, d_model)
         """
-        # Tokenize the sentence
-        doc = self.nlp(sentence)
-        token_ids = [token.idx for token in doc]
-        if len(token_ids) < self.max_seq_len:
-            # Pad the sequence with zeros
-            token_ids += [0] * (self.max_seq_len - len(token_ids))
 
+        token_ids = self.get_token_ids(sentence)
         # Convert to tensor (batch_size, seq_len)
         token_ids_tensor = torch.tensor(token_ids).unsqueeze(0).to(self.token_embedding.weight.device)
 
@@ -40,6 +56,33 @@ class Embedder(nn.Module):
         positional_embeddings = self.positional_embedding(token_embeddings)
         embeddings = self.layer_norm(positional_embeddings)
         return embeddings
+
+    def get_token_ids(self, sentence: str) -> list[int]:
+        """
+        Convert a sentence to token IDs using the vocabulary mapping.
+        """
+        # Tokenize the sentence
+        tokens = word_tokenize(sentence)
+        # Convert tokens to token IDs using the vocabulary mapping
+        token_ids = [self.vocab_table.get(token, self.vocab_table[UNKNOWN_TOKEN]) for token in tokens]
+
+        # Pad the token IDs to the maximum sequence length
+        max_seq_len = self.max_seq_len - 2  # Account for start and end tokens
+        if len(token_ids) < max_seq_len:
+            token_ids += [self.vocab_table[PADDING_TOKEN]] * (max_seq_len - len(token_ids))
+
+        # Add start and end tokens
+        token_ids = [self.vocab_table[START_TOKEN]] + token_ids + [self.vocab_table[END_TOKEN]]
+        return token_ids
+
+    def get_token(self, token_id: int) -> str:
+        """
+        Convert a token ID to the corresponding token using the vocabulary mapping.
+        """
+        for token, idx in self.vocab_table.items():
+            if idx == token_id:
+                return token
+        return UNKNOWN_TOKEN
 
 
 class PositionalEncoding(nn.Module):
