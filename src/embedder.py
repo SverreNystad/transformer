@@ -60,12 +60,12 @@ class Embedder(nn.Module):
         embeddings = self.layer_norm(positional_embeddings)
         return embeddings
 
-    def get_token_ids(self, sentence: str) -> list[int]:
+    def get_token_ids(self, sentence: str, language="english") -> list[int]:
         """
         Convert a sentence to token IDs using the vocabulary mapping.
         """
         # Tokenize the sentence
-        tokens = word_tokenize(sentence)
+        tokens = word_tokenize(sentence, language=language)
         # Convert tokens to token IDs using the vocabulary mapping
         token_ids = [self.vocab_table.get(token, self.vocab_table[UNKNOWN_TOKEN]) for token in tokens]
 
