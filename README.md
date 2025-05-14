@@ -3,6 +3,9 @@
 
 This repository provides a PyTorch implementation of the Transformer as introduced in Vaswani et al.’s 2017 paper “Attention Is All You Need,” which forgoes recurrence and convolution in favor of purely attention-based encoder–decoder stacks to achieve state-of-the-art machine translation performance with greatly improved parallelizability. At its core are scaled dot-product self-attention and multi-head attention mechanisms that dynamically weight token interactions, augmented by sinusoidal positional encodings to inject sequence order information. As the foundational architecture behind BERT, GPT, and other leading large-scale language models, the Transformer has reshaped NLP and beyond by enabling efficient learning of long-range dependencies.
 
+Here you can see the loss of the model during training on casual language modeling on a curated jokes dataset.
+
+![loss-plot](docs/images/training.png)
 
 ## Prerequisites
 
