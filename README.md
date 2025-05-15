@@ -10,7 +10,7 @@ Here you can see the loss of the model during training on casual language modeli
 ## Prerequisites
 
 - Ensure that git is installed on your machine. [Download Git](https://git-scm.com/downloads)
-- Python 3.10 or higher is required for the backend. [Download Python](https://www.python.org/downloads/)
+- Python 3.11 or higher is required for the model. [Download Python](https://www.python.org/downloads/)
 - CUDA Toolkit (optional): For GPU acceleration with PyTorch
 
 ## Installation
