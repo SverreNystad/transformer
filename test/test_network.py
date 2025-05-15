@@ -110,3 +110,39 @@ def test_decoder_only_transformer():
         sequence_length,
         vocab_size,
     ), f"Expected shape (1, {sequence_length}, {vocab_size}), but got {output.shape}"
+
+
+def test_encoder_only_transformer():
+    d_model = 4
+    n_heads = 2
+    d_ff = 8
+    decoder_layers = 0
+    encoder_layers = 2
+    sequence_length = 10
+
+    sentence = "This is a test."
+    vocab = create_vocab_mapping([sentence])
+    src_sequence = sentence
+    target_sequence = sentence
+    src_embedding = Embedder(vocab_table=vocab, embedding_dimension=d_model, max_seq_len=sequence_length)
+    target_embedding = Embedder(vocab_table=vocab, embedding_dimension=d_model, max_seq_len=sequence_length)
+    src_tensor = src_embedding(src_sequence)
+    target_tensor = target_embedding(target_sequence)
+    casual_mask = make_causal_mask(sequence_length).to(target_tensor.device)
+    vocab_size = src_embedding.vocab_size
+
+    transformer = Transformer(
+        output_classes=vocab_size,
+        num_encoder_layers=encoder_layers,
+        num_decoder_layers=decoder_layers,
+        d_model=d_model,
+        n_heads=n_heads,
+        d_ff=d_ff,
+    )
+
+    output = transformer(src_tensor, target_tensor, casual_mask)
+    assert output.shape == (
+        1,
+        sequence_length,
+        vocab_size,
+    ), f"Expected shape (1, {sequence_length}, {vocab_size}), but got {output.shape}"
